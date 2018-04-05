@@ -940,6 +940,14 @@ def buffer_switch_callback(data, signal, current_buffer):
 
 
 @utf8_decode
+def buffer_list_hide_read_callback(data, somecount):
+    for c in EVENTROUTER.weechat_controller.buffers.itervalues():
+        if not c.new_messages:
+            c.hide()
+    return w.WEECHAT_RC_OK
+
+
+@utf8_decode
 def buffer_list_update_callback(data, somecount):
     """
     A simple timer-based callback that will update the buffer list
@@ -1453,6 +1461,12 @@ class SlackTeam(object):
             return True
         else:
             return False
+
+    def hide(self):
+        pass
+
+    def new_messages(self):
+        pass
 
     def mark_read(self, ts=None, update_remote=True, force=False):
         pass
@@ -2151,6 +2165,23 @@ class SlackChannel(SlackChannelCommon):
             else:
                 del self.typing[user]
         return typing
+
+    def hide(self):
+        w.buffer_set(self.channel_buffer, "hidden", "1")
+
+    def mark_read(self, ts=None, update_remote=True, force=False):
+        if self.new_messages or force:
+            if self.channel_buffer:
+                w.buffer_set(self.channel_buffer, "unread", "")
+                w.buffer_set(self.channel_buffer, "hotlist", "-1")
+            if not ts:
+                ts = next(reversed(self.messages), SlackTS())
+            if ts > self.last_read:
+                self.last_read = ts
+            if update_remote:
+                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": ts}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
+                self.eventrouter.receive(s)
+                self.new_messages = False
 
     def user_joined(self, user_id):
         # ugly hack - for some reason this gets turned into a list
@@ -5175,7 +5206,8 @@ def setup_hooks():
 
     w.hook_timer(5000, 0, 0, "ws_ping_cb", "")
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
-    w.hook_timer(1000, 0, 0, "buffer_list_update_callback", "")
+    w.hook_timer(1000, 0, 0, "buffer_list_update_callback", "EVENTROUTER")
+    w.hook_timer(10000, 0, 0, "buffer_list_hide_read_callback", "EVENTROUTER")
     w.hook_timer(3000, 0, 0, "reconnect_callback", "EVENTROUTER")
     w.hook_timer(1000 * 60 * 5, 0, 0, "slack_never_away_cb", "")
 
