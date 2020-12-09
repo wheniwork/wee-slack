@@ -2169,7 +2169,7 @@ class SlackChannel(SlackChannelCommon):
     def hide(self):
         w.buffer_set(self.channel_buffer, "hidden", "1")
 
-    def mark_read(self, ts=None, update_remote=True, force=False):
+    def mark_read(self, ts=None, update_remote=True, force=False, post_data={}):
         if self.new_messages or force:
             if self.channel_buffer:
                 w.buffer_set(self.channel_buffer, "unread", "")
@@ -2177,11 +2177,15 @@ class SlackChannel(SlackChannelCommon):
             if not ts:
                 ts = next(reversed(self.messages), SlackTS())
             if ts > self.last_read:
-                self.last_read = ts
+                self.last_read = SlackTS(ts)
             if update_remote:
-                s = SlackRequest(self.team.token, SLACK_API_TRANSLATOR[self.type]["mark"], {"channel": self.identifier, "ts": ts}, team_hash=self.team.team_hash, channel_identifier=self.identifier)
-                self.eventrouter.receive(s)
-                self.new_messages = False
+                args = {"channel": self.identifier, "ts": ts}
+                args.update(post_data)
+                mark_method = self.team.slack_api_translator[self.type].get("mark")
+                if mark_method:
+                    s = SlackRequest(self.team, mark_method, args, channel=self)
+                    self.eventrouter.receive(s)
+                    self.new_messages = False
 
     def user_joined(self, user_id):
         # ugly hack - for some reason this gets turned into a list
