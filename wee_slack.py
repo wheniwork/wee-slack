@@ -941,7 +941,7 @@ def buffer_switch_callback(data, signal, current_buffer):
 
 @utf8_decode
 def buffer_list_hide_read_callback(data, somecount):
-    for c in EVENTROUTER.weechat_controller.buffers.itervalues():
+    for c in EVENTROUTER.weechat_controller.buffers.values():
         if not c.new_messages:
             c.hide()
     return w.WEECHAT_RC_OK
@@ -5207,7 +5207,7 @@ def setup_hooks():
     w.hook_timer(5000, 0, 0, "ws_ping_cb", "")
     w.hook_timer(1000, 0, 0, "typing_update_cb", "")
     w.hook_timer(1000, 0, 0, "buffer_list_update_callback", "EVENTROUTER")
-    w.hook_timer(10000, 0, 0, "buffer_list_hide_read_callback", "EVENTROUTER")
+    w.hook_timer(60000, 0, 0, "buffer_list_hide_read_callback", "EVENTROUTER")
     w.hook_timer(3000, 0, 0, "reconnect_callback", "EVENTROUTER")
     w.hook_timer(1000 * 60 * 5, 0, 0, "slack_never_away_cb", "")
 
